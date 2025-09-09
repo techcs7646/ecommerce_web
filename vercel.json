@@ -1,33 +1,58 @@
 {
-  "rewrites": [
+  "version": 2,
+  "routes": [
     {
-      "source": "/about",
-      "destination": "/about.html"
+      "src": "^/$",
+      "dest": "/index.html"
     },
     {
-      "source": "/products",
-      "destination": "/products.html"
+      "src": "^/about/?$",
+      "dest": "/about.html"
     },
     {
-      "source": "/contact",
-      "destination": "/contact.html"
+      "src": "^/products/?$",
+      "dest": "/products.html"
     },
     {
-      "source": "/cart",
-      "destination": "/addToCart.html"
+      "src": "^/contact/?$",
+      "dest": "/contact.html"
+    },
+    {
+      "src": "^/cart/?$",
+      "dest": "/addToCart.html"
+    },
+    {
+      "src": "^/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "^/public/(.*)",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "^/(.*\\.(css|js|json|png|jpg|jpeg|gif|svg|ico))$",
+      "dest": "/$1"
+    },
+    {
+      "handle": "filesystem"
     }
   ],
   "headers": [
     {
-      "source": "/(.*\\.(css|js|json))$",
+      "source": "/(.*\\.css)$",
       "headers": [
         {
           "key": "Content-Type",
           "value": "text/css; charset=utf-8"
-        },
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.js)$",
+      "headers": [
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000"
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
         }
       ]
     },
@@ -39,16 +64,6 @@
           "value": "application/json"
         }
       ]
-    },
-    {
-      "source": "/public/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
     }
-  ],
-  "cleanUrls": true
+  ]
 }
