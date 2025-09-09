@@ -2,8 +2,8 @@ import "./style.css";
 import { showProductContainer } from "./homeProductCards.js";
 import { getCartProductFromLS } from "./getCartProducts.js";
 
-// Products data - we'll fetch this properly
-const products = [
+// Fallback products data for offline/error scenarios
+const fallbackProducts = [
   {
     "id": 1,
     "name": "MacBook Pro 16\" M3",
@@ -86,51 +86,127 @@ const products = [
   }
 ];
 
-// Initialize cart on page load
-try {
-  console.log("Initializing application...");
-  console.log("Products data:", products);
-  
-  // Load existing cart data
-  getCartProductFromLS();
-  
-  // Wait for DOM to be ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      initializeProducts();
+// Global products variable
+let products = [];
+
+// Function to fetch products from API with fallback
+async function fetchProducts() {
+  try {
+    console.log("Attempting to fetch products from API...");
+    
+    // Try to fetch from API first
+    const response = await fetch('./api/products.json');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error('Invalid or empty products data from API');
+    }
+    
+    console.log("Products fetched successfully from API:", data.length, "items");
+    return data;
+    
+  } catch (error) {
+    console.warn("Failed to fetch from API, using fallback data:", error.message);
+    return fallbackProducts;
+  }
+}
+
+// Function to validate product data
+function validateProductData(products) {
+  try {
+    if (!Array.isArray(products)) {
+      throw new Error('Products data is not an array');
+    }
+    
+    return products.filter(product => {
+      return product && 
+             typeof product.id !== 'undefined' && 
+             product.name && 
+             typeof product.price === 'number' && 
+             product.image;
     });
-  } else {
+  } catch (error) {
+    console.error('Error validating product data:', error);
+    return fallbackProducts;
+  }
+}
+
+// Initialize application
+async function initializeApp() {
+  try {
+    console.log("Initializing ModernMart application...");
+    
+    // Load existing cart data
+    getCartProductFromLS();
+    
+    // Fetch products
+    const fetchedProducts = await fetchProducts();
+    products = validateProductData(fetchedProducts);
+    
+    console.log("Final products data:", products.length, "valid items");
+    
+    // Wait for DOM to be ready
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        initializeProducts();
+      });
+    } else {
+      initializeProducts();
+    }
+    
+  } catch (error) {
+    console.error("Error initializing application:", error);
+    // Use fallback data in case of any error
+    products = fallbackProducts;
     initializeProducts();
   }
-  
-} catch (error) {
-  console.error("Error initializing application:", error);
 }
 
 function initializeProducts() {
   try {
     console.log("DOM ready, loading products...");
+    
+    if (!products || products.length === 0) {
+      console.warn("No products available, using fallback");
+      products = fallbackProducts;
+    }
+    
     const result = showProductContainer(products);
     
     if (!result) {
       console.error("Failed to load products");
-      // Show fallback message
-      const container = document.querySelector("#productContainer");
-      if (container) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 4rem;">
-            <h3>Products temporarily unavailable</h3>
-            <p>We're working to fix this issue. Please try refreshing the page.</p>
-            <button onclick="location.reload()" style="padding: 1rem 2rem; margin-top: 1rem; background: var(--primary-600); color: white; border: none; border-radius: var(--radius); cursor: pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
-      }
+      showErrorMessage();
     } else {
       console.log("Products loaded successfully!");
     }
   } catch (error) {
     console.error("Error in initializeProducts:", error);
+    showErrorMessage();
   }
 }
+
+function showErrorMessage() {
+  const container = document.querySelector("#productContainer");
+  if (container) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 4rem; background: white; border-radius: var(--radius-lg); margin: 2rem 0; box-shadow: var(--shadow);">
+        <h3 style="color: var(--primary-600); margin-bottom: 1rem;">🛒 Products Loading...</h3>
+        <p style="color: var(--gray-600); margin-bottom: 2rem;">We're working to load the latest products for you.</p>
+        <button onclick="location.reload()" style="padding: 1rem 2rem; background: var(--primary-600); color: white; border: none; border-radius: var(--radius); cursor: pointer; font-weight: 500; transition: all 0.3s ease;" onmouseover="this.style.background='var(--primary-700)'" onmouseout="this.style.background='var(--primary-600)'">
+          🔄 Refresh Page
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Export products for use in other modules
+export { products };
+
+// Start the application
+initializeApp();
